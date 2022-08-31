@@ -10,7 +10,7 @@ const graph = Graph.from(GRAPH_DATA as SerializedGraph);
 
 const sizeScale = scaleLinear()
   .domain(nodeExtent(graph, "size"))
-  .range([3, 18]);
+  .range([4, 20]);
 
 graph.updateEachNodeAttributes((node, attr) => {
   attr.size = sizeScale(attr.size);
