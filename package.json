@@ -1,0 +1,25 @@
+{
+  "name": "loubar",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "kotatsu serve main.ts --typescript --open"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/d3-scale": "^4.0.2",
+    "graphology-types": "^0.24.4",
+    "kotatsu": "^0.22.4",
+    "prettier": "^2.7.1",
+    "typescript": "^4.8.2"
+  },
+  "dependencies": {
+    "d3-scale": "^4.0.2",
+    "graphology": "^0.24.1",
+    "graphology-metrics": "^2.1.0",
+    "papaparse": "^5.3.2",
+    "sigma": "^2.3.1"
+  }
+}
