@@ -34,6 +34,7 @@ graph.updateEachNodeAttributes((node, attr) => {
 });
 
 const container = document.getElementById("container");
+const overlay = document.getElementById("overlay");
 
 const communityColors = new DefaultMap<string, string>(() => randomColor());
 
@@ -57,6 +58,8 @@ Papa.parse("data/log.csv", {
       const nodes = step.nodes.split("|");
       const community = step["move-to-group"];
       const iteration = step.iteration;
+
+      overlay.textContent = iteration;
 
       const color = communityColors.get(community);
 
