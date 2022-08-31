@@ -6,6 +6,7 @@ import { nodeExtent } from "graphology-metrics/graph/extent";
 import { createRandom } from "pandemonium/random";
 import seedrandom from "seedrandom";
 import Papa from "papaparse";
+import chroma from "chroma-js";
 import DefaultMap from "mnemonist/default-map";
 
 import GRAPH_DATA from "./data/celegans.json";
@@ -27,9 +28,18 @@ const sizeScale = scaleLinear()
   .domain(nodeExtent(graph, "size"))
   .range([4, 20]);
 
+const xColorScale = scaleLinear()
+  .domain(nodeExtent(graph, "x"))
+  .range([-128, 128]);
+
+const yColorScale = scaleLinear()
+  .domain(nodeExtent(graph, "y"))
+  .range([-128, 128]);
+
 graph.updateEachNodeAttributes((node, attr) => {
   attr.size = sizeScale(attr.size);
-  attr.color = "#999";
+  // attr.color = "#999";
+  attr.color = chroma.lab(65, xColorScale(attr.x), yColorScale(attr.y)).hex();
   return attr;
 });
 
@@ -43,6 +53,8 @@ Papa.parse("data/log.csv", {
   download: true,
   delimiter: ",",
   complete: (result) => {
+    return;
+
     const steps = result.data as Array<{
       nodes: string;
       "move-to-group": string;
