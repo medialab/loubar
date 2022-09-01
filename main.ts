@@ -3,24 +3,23 @@ import Graph from "graphology";
 import { SerializedGraph } from "graphology-types";
 import { scaleLinear } from "d3-scale";
 import { nodeExtent } from "graphology-metrics/graph/extent";
-import { createRandom } from "pandemonium/random";
-import seedrandom from "seedrandom";
+// import { createRandom } from "pandemonium/random";
+// import seedrandom from "seedrandom";
 import Papa from "papaparse";
 import chroma from "chroma-js";
-import DefaultMap from "mnemonist/default-map";
 
 import GRAPH_DATA from "./data/celegans.json";
 
-const RNG = seedrandom("loubar");
-const RANDOM = createRandom(RNG);
+// const RNG = seedrandom("loubar");
+// const RANDOM = createRandom(RNG);
 
-const randomByte = () => RANDOM(0, 255);
+// const randomByte = () => RANDOM(0, 255);
 
-function randomColor() {
-  const rgb = [randomByte(), randomByte(), randomByte()];
+// function randomColor() {
+//   const rgb = [randomByte(), randomByte(), randomByte()];
 
-  return "#" + rgb.map((hex) => hex.toString(16)).join("");
-}
+//   return "#" + rgb.map((hex) => hex.toString(16)).join("");
+// }
 
 const graph = Graph.from(GRAPH_DATA as SerializedGraph);
 
@@ -46,20 +45,19 @@ graph.updateEachNodeAttributes((node, attr) => {
 const container = document.getElementById("container");
 const overlay = document.getElementById("overlay");
 
-const communityColors = new DefaultMap<string, string>(() => randomColor());
+const communities = new Map<string, { color: string; size: number }>();
 
 Papa.parse("data/log.csv", {
   header: true,
   download: true,
   delimiter: ",",
   complete: (result) => {
-    return;
-
     const steps = result.data as Array<{
       nodes: string;
       "move-to-group": string;
       iteration: string;
     }>;
+
     let i = 0;
 
     function drawOneStep() {
@@ -73,13 +71,20 @@ Papa.parse("data/log.csv", {
 
       overlay.textContent = iteration;
 
-      const color = communityColors.get(community);
+      if (iteration === "0") {
+        communities.set(community, {
+          color: graph.getNodeAttribute(nodes[0], "color"),
+          size: 1,
+        });
+
+        return drawOneStep();
+      }
+
+      const color = communities.get(community).color;
 
       nodes.forEach((node) => {
         graph.setNodeAttribute(node, "color", color);
       });
-
-      if (iteration === "0") return drawOneStep();
 
       requestAnimationFrame(drawOneStep);
     }
