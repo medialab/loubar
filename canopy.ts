@@ -53,6 +53,8 @@ function barycenter(positions) {
 
 const renderer = new Sigma(graph, container);
 
+const nodeToCommunity = new Map();
+
 function canopy() {
   const alreadyDone = new Set<string>();
   const clusters = [];
@@ -62,7 +64,11 @@ function canopy() {
     const cluster = [node];
     const pos = renderer.graphToViewport(attr);
 
+    alreadyDone.add(node);
+
     graph.forEachNeighbor(node, (neighbor, nattr) => {
+      if (alreadyDone.has(neighbor)) return;
+
       const npos = renderer.graphToViewport(nattr);
 
       if (distance(pos, npos) <= RADIUS) {
@@ -71,23 +77,56 @@ function canopy() {
       }
     });
 
-    if (cluster.length > 1) clusters.push(cluster);
+    if (cluster.length > 1) {
+      const clusterName = `cluster_${ID++}`;
+      clusters.push({ name: clusterName, nodes: cluster });
+
+      cluster.forEach((clusterNode) => {
+        nodeToCommunity.set(clusterNode, clusterName);
+      });
+    }
   });
 
   clusters.forEach((cluster) => {
-    const clusterNode = `cluster_${ID++}`;
-    const attributes = cluster.map((node) => {
+    const { name, nodes } = cluster;
+
+    const attributes = nodes.map((node) => {
       return graph.getNodeAttributes(node);
     });
     const clusterPosition = barycenter(attributes);
 
     const newSize = attributes.reduce((a, b) => a + b.originalSize, 0);
 
-    graph.addNode(clusterNode, {
+    const newAttr = {
       ...clusterPosition,
       color: "red",
       size: sizeScale(newSize),
+    };
+
+    if (graph.hasNode(name)) {
+      graph.replaceNodeAttributes(name, newAttr);
+    } else {
+      graph.addNode(name, newAttr);
+    }
+
+    nodes.forEach((node) => {
+      graph.forEachOutEdge(node, (e, a, s, t) => {
+        let tc = nodeToCommunity.get(t);
+
+        if (name === tc) return;
+
+        if (tc === undefined) {
+          tc = t;
+        }
+
+        graph.mergeEdge(name, tc);
+        graph.dropEdge(e);
+      });
     });
+  });
+
+  clusters.forEach(({ nodes }) => {
+    nodes.forEach((node) => graph.dropNode(node));
   });
 }
 
