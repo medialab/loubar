@@ -14,23 +14,30 @@ type NodeAttributes = {
   color: string;
 };
 
-const graph: Graph<NodeAttributes> = Graph.from(
+const GRAPH: Graph<NodeAttributes> = Graph.from(
   GRAPH_DATA as SerializedGraph<NodeAttributes>
 );
-const RADIUS = 25;
 let ID = 0;
 
 const sizeScale = scaleLinear()
-  .domain(nodeExtent(graph, "size"))
+  .domain(nodeExtent(GRAPH, "size"))
   .range([4, 20]);
 
-graph.updateEachNodeAttributes((node, attr) => {
+GRAPH.updateEachNodeAttributes((node, attr) => {
   attr.originalSize = attr.size;
   attr.size = sizeScale(attr.size);
   return attr;
 });
 
 const container = document.getElementById("container");
+
+let currentGraph = GRAPH.copy();
+
+function swapGraph() {
+  const rendererGraph = renderer.getGraph();
+  rendererGraph.clear();
+  rendererGraph.import(currentGraph);
+}
 
 function distance(a, b) {
   const dx = a.x - b.x;
@@ -51,11 +58,13 @@ function barycenter(positions) {
   return { x: x / positions.length, y: y / positions.length };
 }
 
-const renderer = new Sigma(graph, container);
+const renderer = new Sigma(currentGraph, container);
 
 const nodeToCommunity = new Map();
 
-function canopy() {
+function canopy(graph, radius) {
+  const newGraph = graph.nullCopy();
+
   const alreadyDone = new Set<string>();
   const clusters = [];
 
@@ -71,24 +80,28 @@ function canopy() {
 
       const npos = renderer.graphToViewport(nattr);
 
-      if (distance(pos, npos) <= RADIUS) {
+      if (distance(pos, npos) <= radius) {
         cluster.push(neighbor);
         alreadyDone.add(neighbor);
       }
     });
 
-    if (cluster.length > 1) {
-      const clusterName = `cluster_${ID++}`;
-      clusters.push({ name: clusterName, nodes: cluster });
+    const singleton = cluster.length === 1;
+    const clusterName = singleton ? node : `cluster_${ID++}`;
 
-      cluster.forEach((clusterNode) => {
-        nodeToCommunity.set(clusterNode, clusterName);
-      });
-    }
+    clusters.push({
+      name: clusterName,
+      nodes: cluster,
+      singleton,
+    });
+
+    cluster.forEach((clusterNode) => {
+      nodeToCommunity.set(clusterNode, clusterName);
+    });
   });
 
   clusters.forEach((cluster) => {
-    const { name, nodes } = cluster;
+    const { name, nodes, singleton } = cluster;
 
     const attributes = nodes.map((node) => {
       return graph.getNodeAttributes(node);
@@ -99,35 +112,36 @@ function canopy() {
 
     const newAttr = {
       ...clusterPosition,
-      color: "red",
+      color: singleton ? "#999" : "red",
       size: sizeScale(newSize),
+      label: name,
     };
 
-    if (graph.hasNode(name)) {
-      graph.replaceNodeAttributes(name, newAttr);
+    if (newGraph.hasNode(name)) {
+      newGraph.replaceNodeAttributes(name, newAttr);
     } else {
-      graph.addNode(name, newAttr);
+      newGraph.addNode(name, newAttr);
     }
 
     nodes.forEach((node) => {
-      graph.forEachOutEdge(node, (e, a, s, t) => {
+      graph.forEachEdge(node, (e, a, s, t) => {
         let tc = nodeToCommunity.get(t);
 
         if (name === tc) return;
 
-        if (tc === undefined) {
-          tc = t;
-        }
-
-        graph.mergeEdge(name, tc);
-        graph.dropEdge(e);
+        newGraph.updateEdge(name, tc, (attr) => {
+          return {
+            size: ((attr as { size: number }).size || 0) + 1,
+          };
+        });
       });
     });
   });
 
-  clusters.forEach(({ nodes }) => {
-    nodes.forEach((node) => graph.dropNode(node));
-  });
+  console.log(graph.order, newGraph.order);
+
+  return newGraph;
 }
 
-canopy();
+currentGraph = canopy(currentGraph, 25);
+swapGraph();
