@@ -4,7 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "kotatsu serve main.ts --typescript --open --public /data ./data"
+    "canopy": "kotatsu serve canopy.ts --open",
+    "start": "kotatsu serve main.ts --open"
+  },
+  "kotatsu": {
+    "typescript": true,
+    "public": [
+      "/data",
+      "./data"
+    ]
   },
   "author": "",
   "license": "MIT",

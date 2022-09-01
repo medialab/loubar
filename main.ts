@@ -46,6 +46,7 @@ const container = document.getElementById("container");
 const overlay = document.getElementById("overlay");
 
 const communities = new Map<string, { color: string; size: number }>();
+const nodeToCommunity = new Map<string, string>();
 
 Papa.parse("data/log.csv", {
   header: true,
@@ -54,7 +55,7 @@ Papa.parse("data/log.csv", {
   complete: (result) => {
     const steps = result.data as Array<{
       nodes: string;
-      "move-to-group": string;
+      "target-group": string;
       iteration: string;
     }>;
 
@@ -66,7 +67,7 @@ Papa.parse("data/log.csv", {
       const step = steps[i++];
 
       const nodes = step.nodes.split("|");
-      const community = step["move-to-group"];
+      const community = step["target-group"];
       const iteration = step.iteration;
 
       overlay.textContent = iteration;
@@ -76,14 +77,45 @@ Papa.parse("data/log.csv", {
           color: graph.getNodeAttribute(nodes[0], "color"),
           size: 1,
         });
+        nodeToCommunity.set(nodes[0], community);
 
         return drawOneStep();
       }
 
-      const color = communities.get(community).color;
+      const fromCommunity = communities.get(nodeToCommunity.get(nodes[0]));
+      const toCommunity = communities.get(community);
+
+      let newColor: string;
+
+      if (fromCommunity.size < toCommunity.size) {
+        // newColor = chroma
+        //   .mix(
+        //     toCommunity.color,
+        //     fromCommunity.color,
+        //     fromCommunity.size / toCommunity.size
+        //   )
+        //   .hex();
+        newColor = toCommunity.color;
+      } else {
+        // newColor = chroma
+        //   .mix(
+        //     fromCommunity.color,
+        //     toCommunity.color,
+        //     toCommunity.size / fromCommunity.size
+        //   )
+        //   .hex();
+        newColor = fromCommunity.color;
+      }
+
+      fromCommunity.size -= nodes.length;
+      toCommunity.size += nodes.length;
+
+      // fromCommunity.color = newColor;
+      // toCommunity.color = newColor;
 
       nodes.forEach((node) => {
-        graph.setNodeAttribute(node, "color", color);
+        graph.setNodeAttribute(node, "color", newColor);
+        nodeToCommunity.set(node, community);
       });
 
       requestAnimationFrame(drawOneStep);
