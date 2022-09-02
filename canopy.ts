@@ -29,14 +29,19 @@ GRAPH.updateEachNodeAttributes((node, attr) => {
   return attr;
 });
 
+GRAPH.updateEachEdgeAttributes((edge, attr) => {
+  attr.size = 1;
+  return attr;
+});
+
 const container = document.getElementById("container");
 
-let currentGraph = GRAPH.copy();
+let baseGraph = GRAPH.copy();
 
-function swapGraph() {
+function swapGraph(newGraph) {
   const rendererGraph = renderer.getGraph();
   rendererGraph.clear();
-  rendererGraph.import(currentGraph);
+  rendererGraph.import(newGraph);
 }
 
 function distance(a, b) {
@@ -58,7 +63,7 @@ function barycenter(positions) {
   return { x: x / positions.length, y: y / positions.length };
 }
 
-const renderer = new Sigma(currentGraph, container);
+const renderer = new Sigma(baseGraph, container, { stagePadding: 50 });
 
 const nodeToCommunity = new Map();
 
@@ -112,8 +117,9 @@ function canopy(graph, radius) {
 
     const newAttr = {
       ...clusterPosition,
-      color: singleton ? "#999" : "red",
+      color: name.startsWith("cluster_") ? "red" : "#999",
       size: sizeScale(newSize),
+      originalSize: newSize,
       label: name,
     };
 
@@ -124,24 +130,50 @@ function canopy(graph, radius) {
     }
 
     nodes.forEach((node) => {
-      graph.forEachEdge(node, (e, a, s, t) => {
+      graph.forEachEdge(node, (e, edgeAttr, s, t) => {
         let tc = nodeToCommunity.get(t);
 
         if (name === tc) return;
 
         newGraph.updateEdge(name, tc, (attr) => {
           return {
-            size: ((attr as { size: number }).size || 0) + 1,
+            size: ((attr as { size: number }).size || 0) + edgeAttr.size,
           };
         });
       });
     });
   });
 
-  console.log(graph.order, newGraph.order);
-
   return newGraph;
 }
 
-currentGraph = canopy(currentGraph, 25);
-swapGraph();
+const levels: Array<{ ratio: number; canopy?: Graph }> = [
+  { ratio: 0.07 },
+  { ratio: 0.11 },
+  { ratio: 0.2 },
+  { ratio: 0.34 },
+  { ratio: 0.58 },
+  { ratio: 1.0 },
+];
+
+levels.forEach((level, i) => {
+  if (i === 0) {
+    level.canopy = baseGraph.copy();
+  } else {
+    level.canopy = canopy(levels[i - 1].canopy, i * 25);
+  }
+});
+
+let currentLevel = levels[levels.length - 1];
+swapGraph(currentLevel.canopy);
+
+renderer.getCamera().on("updated", (state) => {
+  const ratio = state.ratio;
+  const targetLevel = levels.find((level) => level.ratio > ratio);
+
+  if (targetLevel === currentLevel) return;
+
+  currentLevel = targetLevel;
+
+  swapGraph(targetLevel.canopy);
+});
