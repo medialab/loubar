@@ -19,6 +19,7 @@
   "devDependencies": {
     "@types/chroma-js": "^2.1.4",
     "@types/d3-scale": "^4.0.2",
+    "@types/lodash": "^4.14.184",
     "@types/papaparse": "^5.3.5",
     "@types/seedrandom": "^3.0.2",
     "graphology-types": "^0.24.4",
@@ -31,6 +32,7 @@
     "d3-scale": "^4.0.2",
     "graphology": "^0.24.1",
     "graphology-metrics": "^2.1.0",
+    "lodash": "^4.17.21",
     "mnemonist": "^0.39.2",
     "pandemonium": "^2.3.0",
     "papaparse": "^5.3.2",

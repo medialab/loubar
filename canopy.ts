@@ -3,6 +3,7 @@ import Graph from "graphology";
 import { SerializedGraph } from "graphology-types";
 import { scaleLinear } from "d3-scale";
 import { nodeExtent } from "graphology-metrics/graph/extent";
+import sortBy from "lodash/sortBy";
 
 import GRAPH_DATA from "./data/celegans.json";
 
@@ -19,6 +20,7 @@ const GRAPH: Graph<NodeAttributes> = Graph.from(
 );
 let ID = 0;
 
+// TODO: we need to change the domain of the scale each time
 const sizeScale = scaleLinear()
   .domain(nodeExtent(GRAPH, "size"))
   .range([4, 20]);
@@ -73,7 +75,12 @@ function canopy(graph, radius) {
   const alreadyDone = new Set<string>();
   const clusters = [];
 
-  graph.forEachNode((node, attr) => {
+  const sortedNodes = sortBy(Array.from(graph.nodeEntries()), [
+    ({ attributes }) => -attributes.originalSize,
+    ({ node }) => node,
+  ]);
+
+  sortedNodes.forEach(({ node, attributes: attr }) => {
     if (alreadyDone.has(node)) return;
     const cluster = [node];
     const pos = renderer.graphToViewport(attr);
@@ -106,7 +113,7 @@ function canopy(graph, radius) {
   });
 
   clusters.forEach((cluster) => {
-    const { name, nodes, singleton } = cluster;
+    const { name, nodes } = cluster;
 
     const attributes = nodes.map((node) => {
       return graph.getNodeAttributes(node);
@@ -120,7 +127,8 @@ function canopy(graph, radius) {
       color: name.startsWith("cluster_") ? "red" : "#999",
       size: sizeScale(newSize),
       originalSize: newSize,
-      label: name,
+      label:
+        nodes.length > 1 ? `${nodes[0]} (and ${nodes.length - 1} more)` : name,
     };
 
     if (newGraph.hasNode(name)) {
